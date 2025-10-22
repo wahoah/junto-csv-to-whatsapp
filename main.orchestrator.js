@@ -27,7 +27,7 @@ function setupSheetsOnce() {
   ensureSheet("LOGS", ["ts","level","message","meta"]);
   logInfo("Sheets verificados/creados (headers listos).");
 }
-
+//  End of setupSheetsOnce()
 /** Lista los archivos crudos en la carpeta RAW (por ID) y escribe logs con metadatos */
 function scanRawFiles() {
   try {
