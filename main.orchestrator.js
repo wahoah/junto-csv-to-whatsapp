@@ -138,6 +138,17 @@ function run_daily_pipeline() {
     logWarn("run_build_failed_queue() no está disponible. ¿Agregaste core.failed_queue.gs?");
   }
 
+  // 5) Enriquecer FAILED_QUEUE con info externa (ej. Airtable)
+  if (typeof run_enrich_failed_queue_from_airtable === 'function') {
+    try {
+      run_enrich_failed_queue_from_airtable();
+    } catch (e) {
+      logError("run_enrich_failed_queue_from_airtable error", { err: e && e.message ? e.message : String(e) });
+    }
+  } else {
+    logInfo("run_enrich_failed_queue_from_airtable() no está disponible. Importa core.failed_queue_enrich.js si deseas habilitarlo.");
+  }
+
   logInfo("run_daily_pipeline: fin");
 }
 

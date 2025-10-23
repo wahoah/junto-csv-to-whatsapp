@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "id": "CAPARE00008008010",
+      "createdTime": "2024-06-15T12:00:00.000Z",
+      "fields": {
+        "reference_id": "FAIL-001",
+        "phone_e164": "+50760000001",
+        "segment": "VIP",
+        "wa_template": "failed_payment_vip",
+        "notes": "Cliente con ticket abierto"
+      }
+    },
+    {
+      "id": "CAPARE00008008013",
+      "createdTime": "2024-06-16T09:30:00.000Z",
+      "fields": {
+        "reference_id": "FAIL-002",
+        "phone_e164": "+50760000002",
+        "segment": "STANDARD",
+        "wa_template": "failed_payment_standard",
+        "notes": "Primer recordatorio pendiente"
+      }
+    },
+    {
+      "id": "CAPARE00123",
+      "createdTime": "2024-06-17T15:45:00.000Z",
+      "fields": {
+        "reference_id": "FAIL-003",
+        "phone_e164": "+50760000003",
+        "segment": "STANDARD",
+        "wa_template": "failed_payment_standard",
+        "notes": "Cliente solicitó reintento mañana"
+      }
+    }
+  ]
+}

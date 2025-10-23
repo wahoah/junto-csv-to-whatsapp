@@ -96,7 +96,16 @@ function run_build_failed_queue() {
       first_failed_at: old.first_failed_at || todayStr,
       last_failed_at: todayStr,
       consecutive_failed_days: streak,
-      error_desc: src.error_desc || ''
+      error_desc: src.error_desc || '',
+
+      // Campos de enriquecimiento (se preservan hasta que se refresquen desde Airtable)
+      airtable_record_id: old.airtable_record_id || '',
+      airtable_phone_e164: old.airtable_phone_e164 || '',
+      airtable_segment: old.airtable_segment || '',
+      airtable_wa_template: old.airtable_wa_template || '',
+      airtable_notes: old.airtable_notes || '',
+      airtable_last_sync: old.airtable_last_sync || '',
+      airtable_payload_json: old.airtable_payload_json || ''
     };
 
     byId.set(keyId, row); // dedupe en el mismo batch

@@ -47,7 +47,10 @@ var CONFIG = {
     "id", "source_bank", "reference_id", "amount", "currency", "due_date",
     "customer_name", "concept", "error_desc", "lookup_key", "status",
     "first_seen_at", "days_overdue", "retry_count", "wa_status", "wa_sent_at",
-    "first_failed_at", "last_failed_at", "consecutive_failed_days"
+    "first_failed_at", "last_failed_at", "consecutive_failed_days",
+    "airtable_record_id", "airtable_phone_e164", "airtable_segment",
+    "airtable_wa_template", "airtable_notes", "airtable_last_sync",
+    "airtable_payload_json"
   ],
 
   INGEST_LOG_HEADERS: [
@@ -70,5 +73,38 @@ var CONFIG = {
     BANISTMO: { currency: "USD", status: "PENDIENTE" },
     BANCO_GENERAL: { currency: "USD", status: "PENDIENTE" },
     _FALLBACK: { currency: "USD", status: "PENDIENTE" }
+  },
+
+  AIRTABLE: {
+    USE_STUB: true,       // activa modo stub mientras no tienes credenciales reales
+    BASE_ID: "",           // p.ej. "appXXXXXXXXXXXXXX"
+    API_KEY: "",           // recomendación: guarda el valor real en Script Properties
+    ENDPOINT: "https://api.airtable.com/v0/",
+    RATE_LIMIT_MS: 220,    // Airtable permite ~5 req/s. Ajusta si hay throttling.
+
+    FAILED_QUEUE: {
+      TABLE: "",           // ID o nombre de la tabla con info complementaria
+      VIEW: "",            // opcional: vista filtrada que contenga sólo fallidos
+      SHEET_LOOKUP_COLUMN: "reference_id",   // columna en FAILED_QUEUE (Sheets) para hacer match
+      AIRTABLE_LOOKUP_FIELD: "reference_id", // campo en Airtable para buscar coincidencias
+      MAX_IDS_PER_BATCH: 10,                 // Nº de IDs por fórmula OR() (evita límites de Airtable)
+      FIELD_MAP: {
+        airtable_record_id: "__recordId",    // se guarda el Record ID de Airtable
+        airtable_phone_e164: "phone_e164",
+        airtable_segment: "segment",
+        airtable_wa_template: "wa_template",
+        airtable_notes: "notes"
+        // agrega más campos según necesites → clave = columna en Sheets, valor = nombre del campo en Airtable
+      },
+      // Si defines campos adicionales arriba, agrégales alias aquí para que se pidan en el GET
+      SELECT_FIELDS: [
+        "reference_id",
+        "phone_e164",
+        "segment",
+        "wa_template",
+        "notes"
+      ],
+      STUB_FIXTURE: "airtable_failed_queue.sample" // nombre de la respuesta mock en fixtures/rest_responses
+    }
   }
 };
