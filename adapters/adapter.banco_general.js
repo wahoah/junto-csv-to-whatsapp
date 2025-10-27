@@ -127,10 +127,12 @@ function _bg_statusRule_(raw) {
 
 /** intenta derivar reference_id desde Observaciones (composite_ref) si no viene explícito */
 function _bg_extractRefFromObserv_(observ) {
-  var s = String(observ || '');
-  // heurísticas: busca tokens alfanum >= 6 (puedes ajustar a tu formato real)
-  var m = s.match(/[A-Z0-9]{6,}/i);
-  return m ? m[0] : '';
+  var s = String(observ || '').toUpperCase();
+  var m = s.match(/CAPA[A-Z0-9]{5,}/);
+  if (!m) return '';
+  var token = m[0];
+  if (token.length > 11) return token.slice(0, 11);
+  return token;
 }
 
 function _bg_toNumber_(v) {
@@ -234,14 +236,16 @@ function bg_audit_reference_extraction() {
 }
 
 function _bg_toNumber_(v) {
-  var s = String(v || '').replace(/[^\d.,-]/g, '').replace(',', '.');
+  var s = String(v || '').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
   var n = Number(s);
   return Number.isFinite(n) ? n : '';
 }
 
-// CAPARE + 11 dígitos (17 chars en total)
 function _bg_extractRefFromObserv_(observ) {
-  var s = String(observ || '');
-  var m = s.match(/CAPARE\d{11}/i);
-  return m ? m[0].toUpperCase() : '';
+  var s = String(observ || '').toUpperCase();
+  var m = s.match(/CAPA[A-Z0-9]{5,}/);
+  if (!m) return '';
+  var token = m[0];
+  if (token.length > 11) return token.slice(0, 11);
+  return token;
 }

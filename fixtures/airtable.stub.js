@@ -15,10 +15,11 @@ AIRTABLE_STUB_RESPONSES['airtable_failed_queue.sample'] = {
       "createdTime": "2024-06-15T12:00:00.000Z",
       "fields": {
         "reference_id": "CAPARE00008008013",
-        "phone_e164": "+50760000001",
+        "PhoneNumber": "+50760000001",
         "segment": "VIP",
         "wa_template": "failed_payment_vip",
-        "notes": "Cliente con ticket abierto"
+        "notes": "Cliente con ticket abierto",
+        "ID": "CAPARE00001"
       }
     },
     {
@@ -26,10 +27,11 @@ AIRTABLE_STUB_RESPONSES['airtable_failed_queue.sample'] = {
       "createdTime": "2024-06-16T09:30:00.000Z",
       "fields": {
         "reference_id": "CAPARE00008008005",
-        "phone_e164": "+50760000002",
+        "PhoneNumber": "+50760000002",
         "segment": "STANDARD",
         "wa_template": "failed_payment_standard",
-        "notes": "Primer recordatorio pendiente"
+        "notes": "Primer recordatorio pendiente",
+        "ID": "CAPARE00002"
       }
     },
     {
@@ -37,10 +39,11 @@ AIRTABLE_STUB_RESPONSES['airtable_failed_queue.sample'] = {
       "createdTime": "2024-06-17T15:45:00.000Z",
       "fields": {
         "reference_id": "CAPARE00123",
-        "phone_e164": "+50760000003",
+        "PhoneNumber": "+50760000003",
         "segment": "STANDARD",
         "wa_template": "failed_payment_standard",
-        "notes": "Cliente solicitó reintento mañana"
+        "notes": "Cliente solicitó reintento mañana",
+        "ID": "CAPADR00001"
       }
     }
   ]

@@ -76,9 +76,9 @@ var CONFIG = {
   },
 
   AIRTABLE: {
-    USE_STUB: true,       // activa modo stub mientras no tienes credenciales reales
-    BASE_ID: "",           // p.ej. "appXXXXXXXXXXXXXX"
-    API_KEY: "",           // recomendación: guarda el valor real en Script Properties
+    USE_STUB: true,                      // activa modo stub mientras no tienes credenciales reales
+    BASE_ID: "appJb5P04ROKjf1y1",        // p.ej. "appXXXXXXXXXXXXXX"
+    API_KEY: "tblvB27e1DlxaUxrq",                         // recomendación: guarda el valor real en Script Properties
     ENDPOINT: "https://api.airtable.com/v0/",
     RATE_LIMIT_MS: 220,    // Airtable permite ~5 req/s. Ajusta si hay throttling.
 
@@ -86,11 +86,11 @@ var CONFIG = {
       TABLE: "",           // ID o nombre de la tabla con info complementaria
       VIEW: "",            // opcional: vista filtrada que contenga sólo fallidos
       SHEET_LOOKUP_COLUMN: "reference_id",   // columna en FAILED_QUEUE (Sheets) para hacer match
-      AIRTABLE_LOOKUP_FIELD: "reference_id", // campo en Airtable para buscar coincidencias
+      AIRTABLE_LOOKUP_FIELD: "ID", // campo en Airtable para buscar coincidencias
       MAX_IDS_PER_BATCH: 10,                 // Nº de IDs por fórmula OR() (evita límites de Airtable)
       FIELD_MAP: {
         airtable_record_id: "__recordId",    // se guarda el Record ID de Airtable
-        airtable_phone_e164: "phone_e164",
+        airtable_phone_e164: "PhoneNumber",
         airtable_segment: "segment",
         airtable_wa_template: "wa_template",
         airtable_notes: "notes"
@@ -99,7 +99,7 @@ var CONFIG = {
       // Si defines campos adicionales arriba, agrégales alias aquí para que se pidan en el GET
       SELECT_FIELDS: [
         "reference_id",
-        "phone_e164",
+        "PhoneNumber",
         "segment",
         "wa_template",
         "notes"
