@@ -170,3 +170,18 @@ function _uniqueValues_local(arr) {
   }
   return out;
 }
+
+function _logInfo(msg, meta) {
+  if (typeof logInfo === 'function') return logInfo(msg, meta);
+  if (console && console.log) console.log(msg, meta || '');
+}
+
+function _logWarn(msg, meta) {
+  if (typeof logWarn === 'function') return logWarn(msg, meta);
+  if (console && console.warn) console.warn(msg, meta || '');
+}
+
+function _logError(msg, meta) {
+  if (typeof logError === 'function') return logError(msg, meta);
+  if (console && console.error) console.error(msg, meta || '');
+}

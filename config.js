@@ -76,33 +76,27 @@ var CONFIG = {
   },
 
   AIRTABLE: {
-    USE_STUB: true,                      // activa modo stub mientras no tienes credenciales reales
+    USE_STUB: false,                      // activa modo stub mientras no tienes credenciales reales
     BASE_ID: "appJb5P04ROKjf1y1",        // p.ej. "appXXXXXXXXXXXXXX"
     API_KEY: PropertiesService.getScriptProperties().getProperty('API_KEY'),  // recomendación: guarda el valor real en Script Properties
     ENDPOINT: "https://api.airtable.com/v0/",  // no cambies esto a menos que Airtable lo indique
     RATE_LIMIT_MS: 220,    // Airtable permite ~5 req/s. Ajusta si hay throttling.
 
     FAILED_QUEUE: {
-      TABLE: "",           // ID o nombre de la tabla con info complementaria
+      TABLE: "tblvB27e1DlxaUxrq",           // ID o nombre de la tabla con info complementaria
       VIEW: "",            // opcional: vista filtrada que contenga sólo fallidos
       SHEET_LOOKUP_COLUMN: "reference_id",   // columna en FAILED_QUEUE (Sheets) para hacer match
       AIRTABLE_LOOKUP_FIELD: "ID", // campo en Airtable para buscar coincidencias
       MAX_IDS_PER_BATCH: 10,                 // Nº de IDs por fórmula OR() (evita límites de Airtable)
       FIELD_MAP: {
         airtable_record_id: "__recordId",    // se guarda el Record ID de Airtable
-        airtable_phone_e164: "PhoneNumber",
-        airtable_segment: "segment",
-        airtable_wa_template: "wa_template",
-        airtable_notes: "notes"
+        airtable_phone_e164: "PhoneNumber"
         // agrega más campos según necesites → clave = columna en Sheets, valor = nombre del campo en Airtable
       },
       // Si defines campos adicionales arriba, agrégales alias aquí para que se pidan en el GET
       SELECT_FIELDS: [
-        "reference_id",
-        "PhoneNumber",
-        "segment",
-        "wa_template",
-        "notes"
+        "ID",
+        "PhoneNumber"
       ],
       STUB_FIXTURE: "airtable_failed_queue.sample" // nombre de la respuesta mock en fixtures/rest_responses
     }
