@@ -123,7 +123,12 @@ function run_enrich_failed_queue_from_airtable() {
         continue;
       }
       if (payload.fields.hasOwnProperty(airtableField)) {
-        updated[sheetColumn] = payload.fields[airtableField];
+        var rawValue = payload.fields[airtableField];
+        if (sheetColumn === 'airtable_phone_e164') {
+          updated[sheetColumn] = _normalizeAirtablePhone(rawValue);
+        } else {
+          updated[sheetColumn] = rawValue;
+        }
       }
     }
 
@@ -169,6 +174,20 @@ function _uniqueValues_local(arr) {
     out.push(val);
   }
   return out;
+}
+
+function _normalizeAirtablePhone(value) {
+  if (Array.isArray(value)) {
+    value = value.length ? value[0] : '';
+  }
+  if (value === undefined || value === null) return '';
+  var str = String(value).trim();
+  if (!str) return '';
+
+  var digits = str.replace(/\D/g, '');
+  if (!digits) return '';
+
+  return '+' + digits;
 }
 
 function _logInfo(msg, meta) {
