@@ -78,8 +78,8 @@ var CONFIG = {
   AIRTABLE: {
     USE_STUB: true,                      // activa modo stub mientras no tienes credenciales reales
     BASE_ID: "appJb5P04ROKjf1y1",        // p.ej. "appXXXXXXXXXXXXXX"
-    API_KEY: "tblvB27e1DlxaUxrq",                         // recomendación: guarda el valor real en Script Properties
-    ENDPOINT: "https://api.airtable.com/v0/",
+    API_KEY: PropertiesService.getScriptProperties().getProperty('API_KEY'),  // recomendación: guarda el valor real en Script Properties
+    ENDPOINT: "https://api.airtable.com/v0/",  // no cambies esto a menos que Airtable lo indique
     RATE_LIMIT_MS: 220,    // Airtable permite ~5 req/s. Ajusta si hay throttling.
 
     FAILED_QUEUE: {
