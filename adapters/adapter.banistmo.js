@@ -13,73 +13,82 @@ function run_ingest_banistmo_all() {
     // Heurística simple: procesa todo .csv (si quieres, filtra por nombre “banistmo”)
     if (!/banistmo/i.test(file.getName())) return;
 
-    totals.files++;
-    logInfo("Procesando archivo Banistmo", { name: file.getName(), id: file.getId() });
+    try {
+      totals.files++;
+      logInfo("Procesando archivo Banistmo", { name: file.getName(), id: file.getId() });
 
-    // Parse CSV
-    var rows = _bnm_parseCsvFile_(file);          // Array<Array<string>>
-    if (!rows.length) {
+      // Parse CSV
+      var rows = _bnm_parseCsvFile_(file);          // Array<Array<string>>
+      if (!rows.length) {
+        writeIngestLog({
+          file_name: file.getName(), source_bank: 'BANISTMO',
+          rows_total: 0, rows_ok: 0, rows_err: 0, rows_duplicate: 0,
+          sizeBytes: file.getSize(), lastUpdated: file.getLastUpdated()
+        });
+        return;
+      }
+
+      // Detect header row & build header map
+      var header = rows[0].map(function (h) { return String(h || '').trim(); });
+      var dataRows = rows.slice(1);                 // salta encabezado
+      totals.rows_total += dataRows.length;
+
+      var buffer = [];
+
+      dataRows.forEach(function (arr, idx) {
+        try {
+          var raw = _bnm_rowToObj_(header, arr);    // objeto por nombre de columna
+          var mapped = _bnm_mapToMaster_(raw);      // normaliza campos clave
+
+          // meta de consolidación
+          var meta = {
+            source_bank: "BANISTMO",
+            file_name: file.getName(),
+            file_date: Utilities.formatDate(file.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+            row_number: idx + 2 // +2 por header base-1
+          };
+
+          // contabiliza por estatus ANTES de consolidar
+          var s = (mapped.status || "").toUpperCase();
+          if (s === "SUCCESS") totals.success_count++;
+          else if (s === "FAILED") totals.failed_count++;
+          else totals.pending_count++;
+
+          // validación/consolidación
+          var v = (typeof validateRowBasic === 'function') ? validateRowBasic(mapped) : {};
+          var row = consolidateToMasterRow(mapped, meta, v);
+
+          buffer.push(row);
+          totals.rows_ok++;
+        } catch (e) {
+          totals.rows_err++;
+          logWarn("Banistmo fila inválida", { row: idx + 2, err: String(e) });
+        }
+      });
+
+      if (buffer.length) appendRows('MASTER', buffer);
+
       writeIngestLog({
         file_name: file.getName(), source_bank: 'BANISTMO',
-        rows_total: 0, rows_ok: 0, rows_err: 0, rows_duplicate: 0,
-        sizeBytes: file.getSize(), lastUpdated: file.getLastUpdated()
+        rows_total: totals.rows_total,
+        rows_ok: totals.rows_ok,
+        rows_err: totals.rows_err,
+        rows_duplicate: totals.rows_duplicate,
+        sizeBytes: file.getSize(),
+        lastUpdated: file.getLastUpdated(),
+        success_count: totals.success_count,   // ← NUEVO
+        failed_count: totals.failed_count,     // ← NUEVO
+        pending_count: totals.pending_count    // ← NUEVO
       });
-      return;
-    }
-
-    // Detect header row & build header map
-    var header = rows[0].map(function (h) { return String(h || '').trim(); });
-    var dataRows = rows.slice(1);                 // salta encabezado
-    totals.rows_total += dataRows.length;
-
-    var buffer = [];
-
-    dataRows.forEach(function (arr, idx) {
-      try {
-        var raw = _bnm_rowToObj_(header, arr);    // objeto por nombre de columna
-        var mapped = _bnm_mapToMaster_(raw);      // normaliza campos clave
-
-        // meta de consolidación
-        var meta = {
-          source_bank: "BANISTMO",
-          file_name: file.getName(),
-          file_date: Utilities.formatDate(file.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-          row_number: idx + 2 // +2 por header base-1
-        };
-
-        // contabiliza por estatus ANTES de consolidar
-        var s = (mapped.status || "").toUpperCase();
-        if (s === "SUCCESS") totals.success_count++;
-        else if (s === "FAILED") totals.failed_count++;
-        else totals.pending_count++;
-
-        // validación/consolidación
-        var v = (typeof validateRowBasic === 'function') ? validateRowBasic(mapped) : {};
-        var row = consolidateToMasterRow(mapped, meta, v);
-
-        buffer.push(row);
-        totals.rows_ok++;
-      } catch (e) {
-        totals.rows_err++;
-        logWarn("Banistmo fila inválida", { row: idx + 2, err: String(e) });
+    } catch (e) {
+      if (typeof logError === 'function') {
+        logError("run_ingest_banistmo_all: error procesando archivo", { name: file.getName(), err: String(e) });
+      } else if (typeof Logger !== 'undefined' && Logger.log) {
+        Logger.log("run_ingest_banistmo_all error procesamiento " + file.getName() + ": " + String(e));
       }
-    });
-
-    if (buffer.length) appendRows('MASTER', buffer);
-
-    writeIngestLog({
-      file_name: file.getName(),
-      source_bank: 'BANISTMO',
-      rows_total: totals.rows_total,
-      rows_ok: totals.rows_ok,
-      rows_err: totals.rows_err,
-      rows_duplicate: totals.rows_duplicate,
-      sizeBytes: file.getSize(),
-      lastUpdated: file.getLastUpdated(),
-      success_count: totals.success_count,   // ← NUEVO
-      failed_count: totals.failed_count,     // ← NUEVO
-      pending_count: totals.pending_count    // ← NUEVO
-    });
+    } finally {
+      moveFileToProcessed_(file, CONFIG.RAW_FOLDER_ID);
+    }
   });
 
   logInfo("run_ingest_banistmo_all: resumen", totals);
@@ -184,4 +193,3 @@ function _bnm_statusMap_(s) {
   // fallback
   return CONFIG.STATUSES.PENDIENTE;
 }
-

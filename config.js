@@ -6,6 +6,9 @@ var CONFIG = {
   // === IDs ===
   SPREADSHEET_ID: "1B8nzqm9RbEPJj7HBIPb-Ypivsje5j2BZXqae_Q8-qeU",   // requerido
   RAW_FOLDER_ID: "1WUlPUcDcRe7OsnNKrwwJ0E7CMV3hjDDQ",  // requerido (carpeta /csv_files/raw)
+  PROCESSED_FOLDER_ID: null,                           // opcional: usa esta carpeta directamente si se define
+  PROCESSED_SUBFOLDER_NAME: "processed",               // si no hay ID, se crea/usa una subcarpeta con este nombre
+  MOVE_PROCESSED_FILES: true,                          // mueve los archivos ya procesados para evitar duplicados
 
   // IDs del las hojas, el código intentará encontrarlas por nombre; y si no existen, las crea.
   SHEET_IDS: {

@@ -14,69 +14,79 @@ function run_ingest_banco_general_all() {
     // procesa solo si parece de Banco General (ajusta si lo prefieres estricto)
     if (!/general/i.test(file.getName())) return;
 
-    totals.files++;
-    logInfo("Procesando archivo Banco General", { name: file.getName(), id: file.getId() });
+    try {
+      totals.files++;
+      logInfo("Procesando archivo Banco General", { name: file.getName(), id: file.getId() });
 
-    var rows = _bg_parseCsvFile_(file);
-    if (!rows.length) {
-      writeIngestLog({
-        file_name: file.getName(), source_bank: 'BANCO_GENERAL',
-        rows_total: 0, rows_ok: 0, rows_err: 0, rows_duplicate: 0,
-        sizeBytes: file.getSize(), lastUpdated: file.getLastUpdated()
-      });
-      return;
-    }
-
-    var header = rows[0].map(function (h) { return String(h || '').trim(); });
-    var dataRows = rows.slice(1);
-    totals.rows_total += dataRows.length;
-
-    var buffer = [];
-
-    dataRows.forEach(function (arr, idx) {
-      try {
-        var raw = _bg_rowToObj_(header, arr);
-        var mapped = _bg_mapToMaster_(raw);  // ← aplica reglas de status/observaciones
-
-        var s = (mapped.status || "").toUpperCase();
-        if (s === "SUCCESS") totals.success_count++;
-        else if (s === "FAILED") totals.failed_count++;
-        else totals.pending_count++;
-
-
-        var meta = {
-          source_bank: "BANCO_GENERAL",
-          file_name: file.getName(),
-          file_date: Utilities.formatDate(file.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
-          row_number: idx + 2
-        };
-
-        var v = (typeof validateRowBasic === 'function') ? validateRowBasic(mapped) : {};
-        var row = consolidateToMasterRow(mapped, meta, v);
-
-        buffer.push(row);
-        totals.rows_ok++;
-      } catch (e) {
-        totals.rows_err++;
-        logWarn("Banco General fila inválida", { row: idx + 2, err: String(e) });
+      var rows = _bg_parseCsvFile_(file);
+      if (!rows.length) {
+        writeIngestLog({
+          file_name: file.getName(), source_bank: 'BANCO_GENERAL',
+          rows_total: 0, rows_ok: 0, rows_err: 0, rows_duplicate: 0,
+          sizeBytes: file.getSize(), lastUpdated: file.getLastUpdated()
+        });
+        return;
       }
-    });
 
-    if (buffer.length) appendRows('MASTER', buffer);
+      var header = rows[0].map(function (h) { return String(h || '').trim(); });
+      var dataRows = rows.slice(1);
+      totals.rows_total += dataRows.length;
 
-    writeIngestLog({
-      file_name: file.getName(),
-      source_bank: 'BANCO_GENERAL',
-      rows_total: totals.rows_total,
-      rows_ok: totals.rows_ok,
-      rows_err: totals.rows_err,
-      rows_duplicate: totals.rows_duplicate,
-      sizeBytes: file.getSize(),
-      lastUpdated: file.getLastUpdated(),
-      success_count: totals.success_count,
-      failed_count: totals.failed_count,
-      pending_count: totals.pending_count
-    });
+      var buffer = [];
+
+      dataRows.forEach(function (arr, idx) {
+        try {
+          var raw = _bg_rowToObj_(header, arr);
+          var mapped = _bg_mapToMaster_(raw);  // ← aplica reglas de status/observaciones
+
+          var s = (mapped.status || "").toUpperCase();
+          if (s === "SUCCESS") totals.success_count++;
+          else if (s === "FAILED") totals.failed_count++;
+          else totals.pending_count++;
+
+
+          var meta = {
+            source_bank: "BANCO_GENERAL",
+            file_name: file.getName(),
+            file_date: Utilities.formatDate(file.getLastUpdated(), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+            row_number: idx + 2
+          };
+
+          var v = (typeof validateRowBasic === 'function') ? validateRowBasic(mapped) : {};
+          var row = consolidateToMasterRow(mapped, meta, v);
+
+          buffer.push(row);
+          totals.rows_ok++;
+        } catch (e) {
+          totals.rows_err++;
+          logWarn("Banco General fila inválida", { row: idx + 2, err: String(e) });
+        }
+      });
+
+      if (buffer.length) appendRows('MASTER', buffer);
+
+      writeIngestLog({
+        file_name: file.getName(),
+        source_bank: 'BANCO_GENERAL',
+        rows_total: totals.rows_total,
+        rows_ok: totals.rows_ok,
+        rows_err: totals.rows_err,
+        rows_duplicate: totals.rows_duplicate,
+        sizeBytes: file.getSize(),
+        lastUpdated: file.getLastUpdated(),
+        success_count: totals.success_count,
+        failed_count: totals.failed_count,
+        pending_count: totals.pending_count
+      });
+    } catch (e) {
+      if (typeof logError === 'function') {
+        logError("run_ingest_banco_general_all: error procesando archivo", { name: file.getName(), err: String(e) });
+      } else if (typeof Logger !== 'undefined' && Logger.log) {
+        Logger.log("run_ingest_banco_general_all error procesamiento " + file.getName() + ": " + String(e));
+      }
+    } finally {
+      moveFileToProcessed_(file, CONFIG.RAW_FOLDER_ID);
+    }
   });
 
   logInfo("run_ingest_banco_general_all: resumen", totals);
