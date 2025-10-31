@@ -27,13 +27,64 @@ function run_build_failed_queue() {
     return { processed: 0, inserted: 0, updated: 0 };
   }
 
-  // 1) Todos los FAILED (de cualquier banco)
-  var failedRows = masterRows.filter(function(r){
-    return String(r.status || '').toUpperCase() === String(CONFIG.STATUSES.FAILED);
+  var statuses = {
+    FAILED: String((CONFIG.STATUSES && CONFIG.STATUSES.FAILED) || 'FAILED').toUpperCase(),
+    SUCCESS: String((CONFIG.STATUSES && CONFIG.STATUSES.SUCCESS) || 'SUCCESS').toUpperCase(),
+    PENDIENTE: String((CONFIG.STATUSES && CONFIG.STATUSES.PENDIENTE) || 'PENDIENTE').toUpperCase()
+  };
+  var resolveKeyId = function(src){
+    return String(src.reference_id || src.lookup_key || src.composite_ref || '').trim();
+  };
+  var toNum = function(v){
+    if (v === null || v === undefined) return '';
+    var n = Number(String(v).replace(/[^\d.-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : v;
+  };
+  var resolveTimestamp = function(row){
+    if (!row) return null;
+    var fields = ['status_ts', 'processed_at', 'file_date'];
+    for (var i = 0; i < fields.length; i++) {
+      var raw = row[fields[i]];
+      if (!raw) continue;
+      var date = raw instanceof Date ? raw : new Date(raw);
+      if (date && typeof date.getTime === 'function') {
+        var time = date.getTime();
+        if (!Number.isNaN(time)) return time;
+      }
+    }
+    return null;
+  };
+  var masterIdx = new Map();
+  masterRows.forEach(function(row){
+    var keyId = resolveKeyId(row);
+    if (!keyId) return;
+    var existing = masterIdx.get(keyId);
+    if (!existing) {
+      masterIdx.set(keyId, row);
+      return;
+    }
+    var newTs = resolveTimestamp(row);
+    var oldTs = resolveTimestamp(existing);
+    if (newTs === null && oldTs === null) {
+      masterIdx.set(keyId, row);
+      return;
+    }
+    if (newTs !== null && oldTs === null) {
+      masterIdx.set(keyId, row);
+      return;
+    }
+    if (newTs !== null && oldTs !== null && newTs >= oldTs) {
+      masterIdx.set(keyId, row);
+    }
+  });
+  var latestRows = Array.from(masterIdx.values());
+
+  // 1) Todos los FAILED (sólo la versión más reciente de cada id)
+  var failedRows = latestRows.filter(function(r){
+    return String(r.status || '').toUpperCase() === statuses.FAILED;
   });
   if (!failedRows.length) {
-    _logInfo('core.failed_queue: no hay registros FAILED en MASTER.');
-    return { processed: 0, inserted: 0, updated: 0 };
+    _logInfo('core.failed_queue: no hay registros FAILED en MASTER. Se limpiarán estados previos si aplica.');
   }
 
   // 2) Índice actual por id para preservar metacampos
@@ -44,18 +95,13 @@ function run_build_failed_queue() {
   var tz = Session.getScriptTimeZone();
   var today = new Date();
   var todayStr = Utilities.formatDate(today, tz, 'yyyy-MM-dd');
-  var toNum = function(v){
-    if (v === null || v === undefined) return '';
-    var n = Number(String(v).replace(/[^\d.-]/g, '').replace(',', '.'));
-    return Number.isFinite(n) ? n : v;
-  };
 
   // 4) Build payloads (DEDUP por id) + streak
   var byId = new Map();
 
   failedRows.forEach(function(src){
     // Clave estable = Pay ID mapeado a MASTER.reference_id
-    var keyId = String(src.reference_id || src.lookup_key || src.composite_ref || '').trim();
+    var keyId = resolveKeyId(src);
     if (!keyId) return;
 
     var old = idxFQ.get(keyId) || {};
@@ -109,6 +155,63 @@ function run_build_failed_queue() {
     };
 
     byId.set(keyId, row); // dedupe en el mismo batch
+  });
+
+  // 5) Actualiza registros que dejaron de fallar
+  idxFQ.forEach(function(old, keyId){
+    if (byId.has(keyId)) return; // sigue fallando en este ciclo
+
+    var source = masterIdx.get(keyId) || null;
+    var rawStatus = source && source.status ? String(source.status) : '';
+    var normalizedStatus = rawStatus ? rawStatus.toUpperCase() : '';
+    var finalStatus = CONFIG.STATUSES && CONFIG.STATUSES.SUCCESS ? CONFIG.STATUSES.SUCCESS : 'SUCCESS';
+
+    if (normalizedStatus === statuses.FAILED) {
+      // Si master todavía lo marca como FAILED, lo manejará en el siguiente ciclo.
+      return;
+    }
+    if (normalizedStatus === statuses.SUCCESS) {
+      finalStatus = CONFIG.STATUSES.SUCCESS;
+    } else if (normalizedStatus === statuses.PENDIENTE) {
+      finalStatus = CONFIG.STATUSES.PENDIENTE || rawStatus || finalStatus;
+    } else if (rawStatus) {
+      finalStatus = rawStatus;
+    }
+
+    var merged = {
+      id: keyId,
+      source_bank: (source && (source.source_bank || source.bank)) || old.source_bank || '',
+      reference_id: (source && source.reference_id) || old.reference_id || keyId,
+      amount: source ? toNum(source.amount) : toNum(old.amount),
+      currency: (source && source.currency) || old.currency ||
+        (CONFIG.DEFAULTS_BY_BANK && CONFIG.DEFAULTS_BY_BANK._FALLBACK && CONFIG.DEFAULTS_BY_BANK._FALLBACK.currency) || 'USD',
+      due_date: (source && (source.due_date || source.txn_date || source.date || source.operation_date || source.tx_date)) || old.due_date || '',
+      customer_name: (source && source.customer_name) || old.customer_name || '',
+      concept: (source && (source.concept || source.description)) || old.concept || '',
+      lookup_key: (source && source.lookup_key) || old.lookup_key || '',
+      status: finalStatus,
+
+      first_seen_at: old.first_seen_at || todayStr,
+      days_overdue: '',
+      retry_count: Number.isFinite(Number(old.retry_count)) ? Number(old.retry_count) : 0,
+      wa_status: old.wa_status || 'PENDING',
+      wa_sent_at: old.wa_sent_at || '',
+
+      first_failed_at: old.first_failed_at || old.last_failed_at || old.first_seen_at || '',
+      last_failed_at: old.last_failed_at || old.first_failed_at || '',
+      consecutive_failed_days: 0,
+      error_desc: '',
+
+      airtable_record_id: old.airtable_record_id || '',
+      airtable_phone_e164: old.airtable_phone_e164 || '',
+      airtable_segment: old.airtable_segment || '',
+      airtable_wa_template: old.airtable_wa_template || '',
+      airtable_notes: old.airtable_notes || '',
+      airtable_last_sync: old.airtable_last_sync || '',
+      airtable_payload_json: old.airtable_payload_json || ''
+    };
+
+    byId.set(keyId, merged);
   });
 
   var toUpsert = Array.from(byId.values());
